@@ -1,0 +1,201 @@
+---
+title: "Untitled34"
+format: html
+editor: visual
+echo: false
+
+---
+
+## Introduction
+
+We have been tasked with analyzing data on Veteran employment post Military discharge to inform lawmakers on the current state of Veteran employment and the efficacy of current policy and programs surrounding Veteran employment. Data can be used to address disparities and develop new initiatives to better serve the Veteran community. Data in this analysis specifically comes from The Veteran Employment Outcomes (VEO) data which compares Department of Defense military Discharge Records and records from the Census Bureau. Information includes veterans' labor market outcomes one, five, and 10 years after discharge, by military occupation, rank, demographics (age, sex, race, ethnicity, education), industry and geography of employment. For the purpose of this condensed analysis we will focus on five(5) variables.It is important to note that this data set includes data on prior service Enlsited Members and does not account for the Officer population.
+
+The data set used for this analysis is derived from the US Census Bureau.
+
+Number of Observations: 528
+
+Number of Variables: 29.
+
+Below are the variables and descriptions. Full list of variables and desciptions can be found on a data dictionary located with the source data at the Census Bureau.
+
+## Source
+
+"U.S. Census Bureau. (2020). Veteran Employment Outcomes (VEO) \[Data set\]. Experimental statistics on the earnings and employment outcomes of U.S. military veterans. Retrieved from https://www.census.gov/data/experimental-data-products/veteran-employment-outcomes.html"
+
+## Variables
+
+Variables from the data set:
+
+| Variable Name                    | Description                                           |
+|--------------------------------|----------------------------------------|
+| svc (Branch)                     | Branch of Service                                     |
+| cohort_years (Yearsout)          | Years since discharge                                 |
+| y1_emp (EmplRate1yr)             | Rate of employment 1 year post discharge              |
+| y1_p50_earnings (MeadianEarn1yr) | Median earnings 1 year post discharge                 |
+| paygrade_level(Paygrade)         | Rank/paygrade at time of discharge                    |
+| y5_emp                           | count of employed vetrans in year 5 after discharge   |
+| y10_emp                          | count of employed veterans in year 10 after discharge |
+| y1_nonemp                        | count of unemployed veterans year 1 after discharge   |
+| y5_nonemp                        | count of unemployed veterans year 5 after discharge   |
+| y10_nonemp                       | count of unemployed veterans year 10 after discharge  |
+| y1_p25_earnings                  | Earnings 25th Percentile in year 1(2022 Dollars)      |
+| y5_p25_earnings                  | Earnings 25th Percentile in year 5(2022 Dollars)      |
+| y10_p25_earnings                 | Earnings 25th Percentile in year 10(2022 Dollars)     |
+| y1_p50_earnings                  | Earnings 50th Percentile in year 1(2022 Dollars)      |
+| y5_p50_earnings                  | Earnings 50th Percentile in year 5(2022 Dollars)      |
+| y10_p50_earnings                 | Earnings 50th Percentile in year 10(2022 Dollars)     |
+| y1_p75_earnings                  | Earnings 75th Percentile in year 1(2022 Dollars)      |
+| y5_p75_earnings                  | Earnings 75th Percentile in year 5(2022 Dollars)      |
+| y10_p75_earnings                 | Earnings 75th Percentile in year 10(2022 Dollars)     |
+
+Variables to be used for Analysis & most central to the topic include:
+
+1.  Service (SVC): Branch of service the Veteran served in. This is important because employment outcomes can vary by branch due to differences in training, skills, and post-service networks
+2.  Cohort: This is the year Veterans left the service. Economy and labor market may impact ability for Veterans to obtain employment post service.
+3.  Y1_emp: Indicates number of employed Veterans from the cohort 1 year post service. This indicates employability immediately following service.
+4.  Y5_emp: Indicates number of employed Veterans from the cohort 5 years post service. This indicates employability 5 years post service.
+
+collectively these variables can provide insight on initial and long term veteran employability post service commitment based on cohort and service.
+
+Missing Data: Data is missing for 2015-2020 depending on the cohort and employment years to be studied. For example. 2020 5 and 10 year data is not yet availible because there is no data yet. Missing data was excluded from the preliminary analysis.
+
+## Year 1 Employment By Service for Cohort 2020 & 2016
+
+```{r data load, include=FALSE}
+library(tidyverse)
+library(scales)
+library(knitr)
+library(kableExtra)
+```
+
+```{r read in data}
+veo <- read.csv("veop.csv")
+```
+
+```{r Tables_and_Visualizations, echo=FALSE}
+
+y1_comp <- veo %>%
+  filter(cohort %in% c(2016, 2020)) %>%
+  select(svc, cohort, y1_emp) %>%
+  filter(!is.na(y1_emp))
+
+summary_by_svc <- y1_comp %>%
+  group_by(cohort, svc) %>%
+  summarise(
+    Total      = sum(y1_emp, na.rm = TRUE),
+    Mean   = mean(y1_emp, na.rm = TRUE),
+    Median = median(y1_emp, na.rm = TRUE),
+    SD     = sd(y1_emp, na.rm = TRUE),
+    IQR    = IQR(y1_emp, na.rm = TRUE)
+  ) %>%
+  mutate(
+    Mean   = comma(round(Mean, 0)),
+    Median = comma(Median),
+    SD     = comma(round(SD, 0)),
+    IQR    = comma(IQR)
+  )
+
+kable(summary_by_svc,
+      caption = "Year 1 Employment by Cohort and Service Branch") %>%
+  kable_styling(full_width = FALSE)
+
+
+
+
+plot_df <- veo %>%
+  filter(cohort %in% c(2016, 2020)) %>%
+  filter(!is.na(y1_emp)) %>%
+  filter(svc != "0") %>%
+  group_by(cohort, svc) %>%
+  summarise(
+    TotalY1 = sum(y1_emp, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(plot_df, aes(x = svc, y = TotalY1, fill = factor(cohort))) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title    = "Total Year 1 Employment by Service Branch",
+    subtitle = "Comparison of Cohort 2016 vs. Cohort 2020",
+    x        = "Service Branch",
+    y        = "Total Employed (Year 1)",
+    fill     = "Cohort"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x  = element_text(angle = 25, hjust = 1),
+    legend.position = "top"
+  )
+
+```
+
+## Cohort 2016 Year 1 and Year 5 Employment by Service
+
+```{r Cohort 2016 Y 1 & Y 5 }
+veo_2016 <- veo %>%
+  filter(cohort == 2016)
+
+raw_2016 <- tibble(
+  Statistic = c("Total Employed", "Mean Employed",   "Median Employed",
+                "Mean Non-Employed","Median Non-Employed",
+                "Mean Emp. Rate"),
+  Year1_raw = c(
+    sum(veo_2016$y1_emp,      na.rm=TRUE),
+    mean(veo_2016$y1_emp,      na.rm=TRUE),
+    median(veo_2016$y1_emp,    na.rm=TRUE),
+    mean(veo_2016$y1_nonemp,   na.rm=TRUE),
+    median(veo_2016$y1_nonemp, na.rm=TRUE),
+    mean(veo_2016$y1_emp / (veo_2016$y1_emp + veo_2016$y1_nonemp),
+         na.rm=TRUE)
+  ),
+  Year5_raw = c(
+    sum(veo_2016$y5_emp,      na.rm=TRUE),
+    mean(veo_2016$y5_emp,      na.rm=TRUE),
+    median(veo_2016$y5_emp,    na.rm=TRUE),
+    mean(veo_2016$y5_nonemp,   na.rm=TRUE),
+    median(veo_2016$y5_nonemp, na.rm=TRUE),
+    mean(veo_2016$y5_emp / (veo_2016$y5_emp + veo_2016$y5_nonemp),
+         na.rm=TRUE)
+  )
+)
+
+summary_2016_fmt <- raw_2016 %>%
+  mutate(
+    Year1 = case_when(
+      Statistic == "Mean Emp. Rate" ~ percent(Year1_raw, accuracy = 0.1),
+      TRUE                          ~ comma(round(Year1_raw, 0))
+    ),
+    Year5 = case_when(
+      Statistic == "Mean Emp. Rate" ~ percent(Year5_raw, accuracy = 0.1),
+      TRUE                          ~ comma(round(Year5_raw, 0))
+    )
+  ) %>%
+  select(Statistic, Year1, Year5)
+
+totals_2016 <- veo %>%
+  filter(cohort == 2016) %>%
+  summarise(
+    `Year 1` = sum(y1_emp, na.rm = TRUE),
+    `Year 5` = sum(y5_emp, na.rm = TRUE)
+  ) %>%
+  pivot_longer(everything(), names_to = "Year", values_to = "TotalEmp")
+
+ggplot(totals_2016, aes(x = Year, y = TotalEmp, fill = Year)) +
+  geom_col(width = 0.5, show.legend = FALSE) +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title = "2016 Cohort: Total Employed at Year 1 vs Year 5",
+    x     = "",
+    y     = "Total Number Employed"
+  ) +
+  theme_minimal()
+
+```
+## Preliminary Analysis
+
+Preliminary analysis has shown that Veteran employment improves over time. For the 2016 cohort, there was an increase in employment from year 1 to year 5. This suggests that even without obtaining employment immediately post discharge, Veterans are likely to obtain employment after discharge. Other factors to consider in future analysis would be Veterans who sought education full time post discharge, veterans unable to obtain employment due to disability, and potentially self employed Veterans. 
+
+The Service that had the most employed Veterans 1 year post service was the Army. Further analysis will be required to determine if thie is corelated with the size of the service i.e larger services produce larger amounts of Veterans seeking employment, therefore may have an increased amount of employment. However, there appeared to be a drop in 1 year employment in the Army 2020 cohort, unlike the other services such as the Marines, which experienced an increase in the 1 year employment.
+
+Recommend further analysis on impact of earnings, long term employment success, and occupation. 
